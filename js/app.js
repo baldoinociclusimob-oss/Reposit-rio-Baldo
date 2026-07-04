@@ -5,6 +5,7 @@ import { renderAjustesPage } from "./pages/ajustes.js";
 import { renderTagsPage } from "./pages/tags.js";
 import { renderHistoricoMonthPage, renderHistoricoDayPage } from "./pages/historico.js";
 import { renderTendenciasPage } from "./pages/tendencias.js";
+import { renderDescobertasPage } from "./pages/descobertas.js";
 import { h, mount } from "./ui/dom.js";
 
 route("/hoje", renderHojePage);
@@ -15,9 +16,7 @@ route("/historico", () => renderHistoricoMonthPage({}));
 route("/historico/mes/:year/:month", ({ year, month }) => renderHistoricoMonthPage({ year, month }));
 route("/historico/dia/:date", ({ date }) => renderHistoricoDayPage({ date }));
 route("/tendencias", renderTendenciasPage);
-route("/descobertas", async () => {
-  mount(document.getElementById("app"), h("div", { class: "page-header" }, [h("h1", { text: "Descobertas" }), h("p", { class: "text-muted", text: "Em construção…" })]));
-});
+route("/descobertas", renderDescobertasPage);
 route("/ajustes", renderAjustesPage);
 route("/tags", renderTagsPage);
 
