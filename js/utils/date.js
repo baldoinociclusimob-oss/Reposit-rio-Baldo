@@ -59,6 +59,24 @@ export function lastNDayKeys(n) {
   return out.reverse();
 }
 
+export function daysInMonth(year, month0) {
+  return new Date(year, month0 + 1, 0).getDate();
+}
+
+export function monthKeyRange(year, month0) {
+  const start = `${year}-${pad2(month0 + 1)}-01`;
+  const end = `${year}-${pad2(month0 + 1)}-${pad2(daysInMonth(year, month0))}`;
+  return { start, end };
+}
+
+export function monthLabel(year, month0) {
+  return `${capitalizeFirst(MONTHS[month0])} de ${year}`;
+}
+
+function capitalizeFirst(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function startOfWeek(key) {
   const d = keyToDate(key);
   const day = d.getDay();

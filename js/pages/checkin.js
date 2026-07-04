@@ -18,6 +18,7 @@ export async function renderCheckinPage({ tipo, date }) {
 
   const existing = (await getCheckIn(dateKey, tipo)) || {};
   const data = { ...existing };
+  const backPath = isToday(dateKey) ? "/hoje" : `/historico/dia/${dateKey}`;
 
   const savedStatus = h("span", { class: "text-muted", text: existing.updatedAt ? "Salvo" : "Ainda não salvo" });
 
@@ -39,8 +40,8 @@ export async function renderCheckinPage({ tipo, date }) {
 
   const header = h("div", { class: "page-header" }, [
     h("a", {
-      href: "#/hoje", class: "back-link", text: "‹ Voltar",
-      onClick: (e) => { e.preventDefault(); navigate("/hoje"); },
+      href: `#${backPath}`, class: "back-link", text: "‹ Voltar",
+      onClick: (e) => { e.preventDefault(); navigate(backPath); },
     }),
     h("h1", { text: `${config.emoji} ${config.titulo}` }),
     h("div", { class: "subtitle" }, [
@@ -54,7 +55,7 @@ export async function renderCheckinPage({ tipo, date }) {
     class: "btn btn-primary btn-block", type: "button", text: "Concluir",
     onClick: () => {
       showToast("Check-in salvo");
-      navigate("/hoje");
+      navigate(backPath);
     },
   });
 
