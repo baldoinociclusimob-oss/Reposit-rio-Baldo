@@ -7,6 +7,7 @@ import { renderHistoricoMonthPage, renderHistoricoDayPage } from "./pages/histor
 import { renderTendenciasPage } from "./pages/tendencias.js";
 import { renderDescobertasPage } from "./pages/descobertas.js";
 import { h, mount } from "./ui/dom.js";
+import { startReminderLoop } from "./notifications.js";
 
 route("/hoje", renderHojePage);
 route("/checkin/:tipo", ({ tipo }) => renderCheckinPage({ tipo }));
@@ -25,3 +26,10 @@ setNotFound(async () => {
 });
 
 startRouter();
+startReminderLoop();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  });
+}
