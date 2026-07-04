@@ -1,0 +1,15 @@
+{
+  "name": "Diário Vital",
+  "short_name": "Diário Vital",
+  "description": "Diário pessoal de saúde e bem-estar — 100% local no seu aparelho",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#7c9885",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
