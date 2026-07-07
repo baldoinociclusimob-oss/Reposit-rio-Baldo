@@ -6,11 +6,23 @@ import {
   getReminderSettings, setReminderSettings, requestNotificationPermission, notificationsSupported,
 } from "../notifications.js";
 import { CHECKIN_ORDER, CHECKIN_TYPES } from "../checkinSchema.js";
+import {
+  getAuthSettings, setPassword, verifyPassword, disableLock,
+  platformBiometricAvailable, enableFaceId, disableFaceId,
+} from "../auth.js";
 
 export async function renderAjustesPage() {
   const app = document.getElementById("app");
 
   const header = h("div", { class: "page-header" }, [h("h1", { text: "Ajustes" })]);
+
+  const perfilCard = h("div", { class: "card" }, [
+    h("div", { class: "card-title", text: "🧾 Meu perfil" }),
+    h("div", { class: "card-sub", text: "Nome, idade, CPF, telefone, alergias e ficha médica." }),
+    h("button", { class: "btn btn-primary", type: "button", text: "Abrir", onClick: () => navigate("/perfil") }),
+  ]);
+
+  const securityCard = h("div", { class: "card" }, []);
 
   const tagsCard = h("div", { class: "card" }, [
     h("div", { class: "card-title", text: "🏷️ Gerenciar tags" }),
@@ -47,8 +59,112 @@ export async function renderAjustesPage() {
   ]);
 
   const remindersCard = h("div", { class: "card" }, []);
-  mount(app, header, tagsCard, backupCard, remindersCard);
+  mount(app, header, perfilCard, securityCard, tagsCard, backupCard, remindersCard);
   await renderReminders(remindersCard);
+  await renderSeguranca(securityCard);
+}
+
+async function renderSeguranca(card) {
+  clear(card);
+  card.appendChild(h("div", { class: "card-title", text: "🔒 Segurança" }));
+
+  const authSettings = await getAuthSettings();
+  const bioAvailable = await platformBiometricAvailable();
+
+  if (!authSettings.enabled) {
+    card.appendChild(h("div", {
+      class: "card-sub",
+      text: "Peça uma senha para abrir o app. Sem servidor, não há como recuperar uma senha esquecida — guarde bem.",
+    }));
+    const newPass = h("input", { type: "password", placeholder: "Nova senha", autocomplete: "new-password" });
+    const confirmPass = h("input", { type: "password", placeholder: "Confirmar senha", autocomplete: "new-password" });
+    const errorMsg = h("p", { class: "lock-error hidden" });
+    card.appendChild(h("div", { class: "security-setup-form stack" }, [
+      newPass, confirmPass, errorMsg,
+      h("button", {
+        class: "btn btn-primary btn-block", type: "button", text: "Ativar senha",
+        onClick: async () => {
+          if (newPass.value.length < 4) {
+            errorMsg.textContent = "Use pelo menos 4 caracteres.";
+            errorMsg.classList.remove("hidden");
+            return;
+          }
+          if (newPass.value !== confirmPass.value) {
+            errorMsg.textContent = "As senhas não coincidem.";
+            errorMsg.classList.remove("hidden");
+            return;
+          }
+          await setPassword(newPass.value);
+          showToast("Senha ativada");
+          await renderSeguranca(card);
+        },
+      }),
+    ]));
+    return;
+  }
+
+  card.appendChild(h("div", { class: "security-status", text: "🔓 Protegido por senha" }));
+
+  const changeErrorMsg = h("p", { class: "lock-error hidden" });
+  const currentPass = h("input", { type: "password", placeholder: "Senha atual", autocomplete: "current-password" });
+  const newPass = h("input", { type: "password", placeholder: "Nova senha", autocomplete: "new-password" });
+  const confirmPass = h("input", { type: "password", placeholder: "Confirmar nova senha", autocomplete: "new-password" });
+
+  card.appendChild(h("div", { class: "security-setup-form stack" }, [
+    currentPass, newPass, confirmPass, changeErrorMsg,
+    h("div", { class: "row" }, [
+      h("button", {
+        class: "btn btn-primary", type: "button", text: "Alterar senha",
+        onClick: async () => {
+          const ok = await verifyPassword(currentPass.value);
+          if (!ok) { changeErrorMsg.textContent = "Senha atual incorreta."; changeErrorMsg.classList.remove("hidden"); return; }
+          if (newPass.value.length < 4) { changeErrorMsg.textContent = "Use pelo menos 4 caracteres."; changeErrorMsg.classList.remove("hidden"); return; }
+          if (newPass.value !== confirmPass.value) { changeErrorMsg.textContent = "As senhas não coincidem."; changeErrorMsg.classList.remove("hidden"); return; }
+          await setPassword(newPass.value);
+          showToast("Senha alterada");
+          await renderSeguranca(card);
+        },
+      }),
+      h("button", {
+        class: "btn btn-danger", type: "button", text: "Remover proteção",
+        onClick: async () => {
+          try {
+            await disableLock(currentPass.value);
+            showToast("Proteção por senha removida");
+            await renderSeguranca(card);
+          } catch (err) {
+            changeErrorMsg.textContent = err.message;
+            changeErrorMsg.classList.remove("hidden");
+          }
+        },
+      }),
+    ]),
+  ]));
+
+  if (bioAvailable) {
+    if (authSettings.faceId) {
+      card.appendChild(h("div", { class: "settings-row" }, [
+        h("div", { class: "label", text: "Face ID / Touch ID ativado" }),
+        h("button", {
+          class: "btn btn-sm btn-ghost", type: "button", text: "Desativar",
+          onClick: async () => { await disableFaceId(); showToast("Face ID/Touch ID desativado"); await renderSeguranca(card); },
+        }),
+      ]));
+    } else {
+      card.appendChild(h("button", {
+        class: "btn btn-block", type: "button", text: "🔐 Habilitar Face ID / Touch ID", style: "margin-top:12px;",
+        onClick: async () => {
+          try {
+            await enableFaceId();
+            showToast("Face ID/Touch ID habilitado");
+            await renderSeguranca(card);
+          } catch {
+            showToast("Não foi possível habilitar — tente novamente");
+          }
+        },
+      }));
+    }
+  }
 }
 
 async function renderReminders(card) {

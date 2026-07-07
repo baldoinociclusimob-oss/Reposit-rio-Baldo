@@ -206,7 +206,8 @@ a { color: inherit; }
 }
 .field-hint { font-weight: 400; color: var(--text-muted); font-size: 12px; }
 
-textarea, input[type="text"], input[type="number"], select {
+textarea, input[type="text"], input[type="number"], input[type="tel"],
+input[type="password"], input[type="time"], input[type="date"], select {
   width: 100%;
   font-family: inherit;
   font-size: 15px;
@@ -433,3 +434,37 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
 @media (min-width: 640px) {
   .tabbar { max-width: 640px; margin: 0 auto; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-radius: 20px 20px 0 0; }
 }
+
+/* ---------- Lock screen ---------- */
+.lock-screen {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+  z-index: 200;
+}
+.lock-card {
+  width: 100%; max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
+  padding: 32px 24px;
+  text-align: center;
+}
+.lock-icon { font-size: 40px; margin-bottom: 6px; }
+.lock-card h1 { font-size: 20px; margin-bottom: 4px; }
+.lock-card p { margin-bottom: 18px; }
+.lock-card .field { text-align: left; margin-bottom: 14px; }
+.lock-faceid-btn { background: var(--primary-tint); color: var(--primary-dark); margin-bottom: 14px; }
+.lock-divider {
+  font-size: 12px; color: var(--text-muted); font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: 14px;
+}
+.lock-error { color: var(--danger); font-size: 13px; margin: -6px 0 12px; text-align: left; }
+.lock-error.hidden { display: none; }
+
+/* ---------- Segurança (Ajustes) ---------- */
+.security-setup-form { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.security-status { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--primary-dark); margin-bottom: 10px; }

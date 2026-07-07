@@ -4,11 +4,14 @@ import { renderCheckinPage } from "./pages/checkin.js";
 import { renderMomentoPage } from "./pages/momento.js";
 import { renderAjustesPage } from "./pages/ajustes.js";
 import { renderTagsPage } from "./pages/tags.js";
+import { renderPerfilPage } from "./pages/perfil.js";
 import { renderHistoricoMonthPage, renderHistoricoDayPage } from "./pages/historico.js";
 import { renderTendenciasPage } from "./pages/tendencias.js";
 import { renderDescobertasPage } from "./pages/descobertas.js";
 import { h, mount } from "./ui/dom.js";
 import { startReminderLoop } from "./notifications.js";
+import { getAuthSettings, isUnlockedThisSession, markUnlocked } from "./auth.js";
+import { renderLockScreen } from "./pages/lock.js";
 
 route("/hoje", renderHojePage);
 route("/checkin/:tipo", ({ tipo }) => renderCheckinPage({ tipo }));
@@ -23,13 +26,37 @@ route("/tendencias", renderTendenciasPage);
 route("/descobertas", renderDescobertasPage);
 route("/ajustes", renderAjustesPage);
 route("/tags", renderTagsPage);
+route("/perfil", renderPerfilPage);
 
 setNotFound(async () => {
   mount(document.getElementById("app"), h("div", { class: "page-header" }, [h("h1", { text: "Página não encontrada" })]));
 });
 
-startRouter();
-startReminderLoop();
+function startApp() {
+  startRouter();
+  startReminderLoop();
+}
+
+async function boot() {
+  const authSettings = await getAuthSettings();
+  const tabbar = document.getElementById("tabbar");
+
+  if (authSettings.enabled && !isUnlockedThisSession()) {
+    tabbar.classList.add("hidden");
+    await renderLockScreen({
+      hasFaceId: Boolean(authSettings.faceId),
+      onUnlock: () => {
+        markUnlocked();
+        tabbar.classList.remove("hidden");
+        startApp();
+      },
+    });
+  } else {
+    startApp();
+  }
+}
+
+boot();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
