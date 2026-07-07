@@ -103,6 +103,13 @@ function renderNumber(field, value, onChange) {
   return fieldWrap(field.label, input);
 }
 
+function renderTime(field, value, onChange) {
+  const input = h("input", { type: "time", value: value || "" });
+  const emit = debounce(() => onChange(input.value || null), 250);
+  input.addEventListener("input", emit);
+  return fieldWrap(field.label, input);
+}
+
 function renderText(field, value, onChange) {
   const textarea = h("textarea", { placeholder: field.placeholder || "", value: value || "" });
   const emit = debounce(() => onChange(textarea.value), 350);
@@ -130,6 +137,7 @@ const RENDERERS = {
   mood: renderMood,
   boolean3: renderBoolean3,
   number: renderNumber,
+  time: renderTime,
   text: renderText,
   "tags-multi": renderTagsMulti,
   "pain-list": renderPainList,

@@ -1,7 +1,7 @@
 // Exportação e importação manuais dos dados — o único jeito de tirar uma
 // cópia dos dados do aparelho, já que tudo fica local (sem nuvem, sem servidor).
 
-import { exportAllData, bulkPutCheckIns, bulkPutTags } from "./db.js";
+import { exportAllData, bulkPutCheckIns, bulkPutTags, bulkPutMomentos } from "./db.js";
 import { CHECKIN_TYPES } from "./checkinSchema.js";
 
 function downloadBlob(content, filename, mime) {
@@ -48,8 +48,8 @@ export async function exportCSV() {
   }
 
   const columns = [
-    "data", "tipo",
-    "qualidade_sono", "horas_dormidas", "acordou_meio_da_noite", "sonhou",
+    "data", "hora", "tipo",
+    "qualidade_sono", "horas_dormidas", "acordou_meio_da_noite", "sonhou", "hora_acordou", "hora_dormir",
     "humor", "energia", "nota_geral", "estresse",
     "cafe_da_manha", "almoco", "jantar",
     "dores", "lugares", "atividades", "pessoas",
@@ -65,11 +65,14 @@ export async function exportCSV() {
       const dores = c.tipo === "matinal" ? c.doresAcordar : c.dores;
       const row = [
         c.date,
+        c.horaCheckin ?? "",
         c.tipo,
         c.sonoQualidade ?? "",
         c.horasDormidas ?? "",
         c.acordouMeio ?? "",
         c.sonhou ?? "",
+        c.horaAcordou ?? "",
+        c.horaDormir ?? "",
         humor ?? "",
         c.energia ?? "",
         c.notaGeral ?? "",
@@ -84,6 +87,20 @@ export async function exportCSV() {
         c.momentoBom ?? "",
         c.momentoRuim ?? "",
         c.observacoes ?? "",
+      ].map(csvEscape);
+      rows.push(row.join(","));
+    });
+
+  (data.momentos || [])
+    .sort((a, b) => (a.date + (a.horario || "")).localeCompare(b.date + (b.horario || "")))
+    .forEach((m) => {
+      const row = [
+        m.date, m.horario ?? "", "momento",
+        "", "", "", "", "", "",
+        m.humor ?? "", "", "", "",
+        foodList(m.comidas), "", "",
+        painList(m.dores), "", tagList(m.atividades), "",
+        "", "", m.texto ?? "",
       ].map(csvEscape);
       rows.push(row.join(","));
     });
@@ -107,9 +124,11 @@ export async function importJSON(file) {
   const validTipos = new Set(Object.keys(CHECKIN_TYPES));
   const checkins = data.checkins.filter((c) => c && c.date && validTipos.has(c.tipo));
   const tags = data.tags.filter((t) => t && t.id && t.categoria && t.nome);
+  const momentos = Array.isArray(data.momentos) ? data.momentos.filter((m) => m && m.id && m.date) : [];
 
   await bulkPutTags(tags);
   await bulkPutCheckIns(checkins);
+  if (momentos.length) await bulkPutMomentos(momentos);
 
-  return { checkinsCount: checkins.length, tagsCount: tags.length };
+  return { checkinsCount: checkins.length, tagsCount: tags.length, momentosCount: momentos.length };
 }

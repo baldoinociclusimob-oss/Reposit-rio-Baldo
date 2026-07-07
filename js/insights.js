@@ -2,7 +2,7 @@
 // em linguagem de tendência (nunca de certeza médica), sempre informando a
 // base de dados usada. Nada daqui é enviado para fora do aparelho.
 
-import { getAllCheckIns, getAllTags } from "./db.js";
+import { getAllCheckIns, getAllTags, getAllMomentos } from "./db.js";
 import { buildDailySeries, avg } from "./aggregate.js";
 import { weekdayLabel } from "./utils/date.js";
 
@@ -188,8 +188,8 @@ function activityInsights(days, tagById) {
 }
 
 export async function generateInsights() {
-  const [allCheckins, allTags] = await Promise.all([getAllCheckIns(), getAllTags()]);
-  const series = buildDailySeries(allCheckins);
+  const [allCheckins, allTags, allMomentos] = await Promise.all([getAllCheckIns(), getAllTags(), getAllMomentos()]);
+  const series = buildDailySeries(allCheckins, allMomentos);
   const days = [...series.values()];
   const tagById = new Map(allTags.map((t) => [t.id, t]));
 

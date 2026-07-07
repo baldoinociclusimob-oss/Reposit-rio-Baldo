@@ -1,7 +1,7 @@
 import { h, mount } from "../ui/dom.js";
 import { CHECKIN_TYPES } from "../checkinSchema.js";
 import { getCheckIn, saveCheckIn } from "../db.js";
-import { formatKeyLong, todayKey, isToday } from "../utils/date.js";
+import { formatKeyLong, todayKey, isToday, nowHHMM } from "../utils/date.js";
 import { renderField } from "../ui/fieldRenderers.js";
 import { navigate } from "../router.js";
 import { showToast } from "../ui/toast.js";
@@ -19,6 +19,12 @@ export async function renderCheckinPage({ tipo, date }) {
   const existing = (await getCheckIn(dateKey, tipo)) || {};
   const data = { ...existing };
   const backPath = isToday(dateKey) ? "/hoje" : `/historico/dia/${dateKey}`;
+
+  // Sugere a hora atual como valor inicial do "hora deste check-in" em
+  // registros novos de hoje — só vira dado de fato se algum campo for salvo.
+  if (!existing.id && isToday(dateKey) && config.fields.some((f) => f.key === "horaCheckin")) {
+    data.horaCheckin = nowHHMM();
+  }
 
   const savedStatus = h("span", { class: "text-muted", text: existing.updatedAt ? "Salvo" : "Ainda não salvo" });
 

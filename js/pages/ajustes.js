@@ -35,7 +35,7 @@ export async function renderAjustesPage() {
             if (!ok) { e.target.value = ""; return; }
             try {
               const result = await importJSON(file);
-              showToast(`Importado: ${result.checkinsCount} check-ins, ${result.tagsCount} tags`);
+              showToast(`Importado: ${result.checkinsCount} check-ins, ${result.momentosCount} registros espontâneos, ${result.tagsCount} tags`);
             } catch (err) {
               alert(err.message);
             }

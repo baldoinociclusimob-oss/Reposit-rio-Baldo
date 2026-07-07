@@ -18,6 +18,11 @@ export function todayKey() {
   return toKey(new Date());
 }
 
+export function nowHHMM() {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
 export function keyToDate(key) {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d);

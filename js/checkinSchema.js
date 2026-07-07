@@ -22,6 +22,8 @@ export const CHECKIN_TYPES = {
     descCurta: "Como foi a sua noite",
     janela: "ao acordar",
     fields: [
+      { key: "horaAcordou", type: "time", label: "Hora que acordou" },
+      { key: "horaCheckin", type: "time", label: "Hora deste check-in" },
       { key: "sonoQualidade", type: "scale5", label: "Qualidade do sono" },
       { key: "horasDormidas", type: "number", label: "Horas dormidas", min: 0, max: 24, step: 0.5, placeholder: "ex.: 7.5" },
       { key: "acordouMeio", type: "boolean3", label: "Acordou no meio da noite?" },
@@ -39,6 +41,7 @@ export const CHECKIN_TYPES = {
     descCurta: "Como está o seu dia",
     janela: "durante o dia",
     fields: [
+      { key: "horaCheckin", type: "time", label: "Hora deste check-in" },
       { key: "humor", type: "mood", label: "Humor agora" },
       { key: "energia", type: "scale5", label: "Energia agora" },
       { key: "cafeDaManha", type: "tags-multi", categoria: "comida", label: "O que comeu no café da manhã" },
@@ -57,11 +60,13 @@ export const CHECKIN_TYPES = {
     descCurta: "Balanço do dia",
     janela: "à noite",
     fields: [
+      { key: "horaCheckin", type: "time", label: "Hora deste check-in" },
       { key: "notaGeral", type: "scale5", label: "Nota geral do dia" },
       { key: "humor", type: "mood", label: "Humor" },
       { key: "jantar", type: "tags-multi", categoria: "comida", label: "O que jantou" },
       { key: "dores", type: "pain-list", label: "Dores", categoria: "dor" },
       { key: "estresse", type: "scale5", label: "Nível de estresse" },
+      { key: "horaDormir", type: "time", label: "Hora que vai dormir" },
       { key: "momentoBom", type: "text", label: "Um momento bom do dia", placeholder: "Opcional" },
       { key: "momentoRuim", type: "text", label: "Um momento ruim do dia", placeholder: "Opcional" },
       { key: "observacoes", type: "text", label: "Observações", placeholder: "Algo mais que queira registrar…" },
@@ -70,6 +75,24 @@ export const CHECKIN_TYPES = {
 };
 
 export const CHECKIN_ORDER = ["matinal", "vespertino", "noturno"];
+
+// Registro espontâneo: não é um dos 3 check-ins fixos (um por dia cada), pode
+// haver quantos forem necessários no mesmo dia, a qualquer hora, sem precisar
+// editar o check-in do período.
+export const MOMENTO_SCHEMA = {
+  tipo: "momento",
+  titulo: "Como estou agora",
+  emoji: "✨",
+  descCurta: "Registro rápido, a qualquer hora",
+  fields: [
+    { key: "horario", type: "time", label: "Hora" },
+    { key: "humor", type: "mood", label: "Como está se sentindo" },
+    { key: "dores", type: "pain-list", label: "Dores ou sintomas", categoria: "dor" },
+    { key: "comidas", type: "tags-multi", categoria: "comida", label: "Comeu ou bebeu algo agora" },
+    { key: "atividades", type: "tags-multi", categoria: "atividade", label: "O que estava fazendo" },
+    { key: "texto", type: "text", label: "O que está acontecendo", placeholder: "ex.: mastiguei um chiclete e o estômago começou a doer" },
+  ],
+};
 
 /** Um checkin é considerado "feito" se ao menos um campo tiver valor preenchido. */
 export function isCheckInFilled(record) {

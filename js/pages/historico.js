@@ -1,11 +1,12 @@
 import { h, mount } from "../ui/dom.js";
-import { getCheckInsInRange, getCheckInsByDate } from "../db.js";
-import { CHECKIN_TYPES, CHECKIN_ORDER, isCheckInFilled } from "../checkinSchema.js";
+import { getCheckInsInRange, getCheckInsByDate, getMomentosByDate, getAllTags } from "../db.js";
+import { CHECKIN_TYPES, CHECKIN_ORDER, isCheckInFilled, MOMENTO_SCHEMA } from "../checkinSchema.js";
 import {
   WEEKDAYS_SHORT, daysInMonth, monthKeyRange, monthLabel, pad2,
   todayKey, formatKeyLong, keyToDate,
 } from "../utils/date.js";
 import { navigate } from "../router.js";
+import { momentoSummaryText } from "../momentoSummary.js";
 
 export async function renderHistoricoMonthPage({ year, month } = {}) {
   const app = document.getElementById("app");
@@ -77,8 +78,11 @@ export async function renderHistoricoMonthPage({ year, month } = {}) {
 
 export async function renderHistoricoDayPage({ date }) {
   const app = document.getElementById("app");
-  const records = await getCheckInsByDate(date);
+  const [records, momentos, tags] = await Promise.all([
+    getCheckInsByDate(date), getMomentosByDate(date), getAllTags(),
+  ]);
   const byTipo = Object.fromEntries(records.map((r) => [r.tipo, r]));
+  const tagById = new Map(tags.map((t) => [t.id, t]));
   const d = keyToDate(date);
 
   const header = h("div", { class: "page-header" }, [
@@ -110,5 +114,27 @@ export async function renderHistoricoDayPage({ date }) {
     ]);
   });
 
-  mount(app, header, h("div", { class: "day-detail-list" }, rows));
+  const momentoBtn = h("button", {
+    class: "btn btn-block momento-add-btn", type: "button",
+    onClick: () => navigate(`/momento/novo/${date}`),
+  }, [`${MOMENTO_SCHEMA.emoji} Registrar como estava nesse dia`]);
+
+  const momentoRows = momentos.map((m) =>
+    h("a", {
+      href: `#/momento/${m.id}`,
+      class: "checkin-row",
+      onClick: (e) => { e.preventDefault(); navigate(`/momento/${m.id}`); },
+    }, [
+      h("span", { class: "emoji", text: MOMENTO_SCHEMA.emoji }),
+      h("div", { class: "info" }, [
+        h("div", { class: "title", text: m.horario ? `Às ${m.horario}` : "Registro espontâneo" }),
+        h("div", { class: "desc", text: momentoSummaryText(m, tagById) }),
+      ]),
+    ])
+  );
+  const momentoSection = momentos.length
+    ? h("div", {}, [h("h2", { class: "section-title", text: "Registros espontâneos" }), ...momentoRows])
+    : null;
+
+  mount(app, header, h("div", { class: "day-detail-list" }, rows), momentoBtn, momentoSection);
 }

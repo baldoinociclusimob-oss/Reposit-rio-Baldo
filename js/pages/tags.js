@@ -9,6 +9,7 @@ const CATEGORIES = [
   { key: "lugar", label: "Lugares" },
   { key: "atividade", label: "Atividades" },
   { key: "pessoa", label: "Pessoas" },
+  { key: "alergia", label: "Alergias" },
 ];
 
 export async function renderTagsPage() {

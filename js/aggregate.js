@@ -17,11 +17,13 @@ export function groupByDate(checkins) {
   return byDate;
 }
 
-/** Métricas de um único dia a partir de {matinal, vespertino, noturno} (cada um opcional). */
-export function dailyMetrics(date, dayRecords = {}) {
+/** Métricas de um único dia a partir de {matinal, vespertino, noturno} (cada um opcional)
+ * mais os registros espontâneos ("momentos") daquele dia, que entram nas mesmas
+ * métricas (humor, dores, comidas, atividades) para o motor de Descobertas enxergar tudo junto. */
+export function dailyMetrics(date, dayRecords = {}, momentosDoDia = []) {
   const { matinal, vespertino, noturno } = dayRecords;
 
-  const humor = avg([matinal?.humorAcordar, vespertino?.humor, noturno?.humor]);
+  const humor = avg([matinal?.humorAcordar, vespertino?.humor, noturno?.humor, ...momentosDoDia.map((m) => m.humor)]);
   const energia = avg([matinal?.energia, vespertino?.energia]);
   const sono = typeof matinal?.sonoQualidade === "number" ? matinal.sonoQualidade : null;
   const horasDormidas = typeof matinal?.horasDormidas === "number" ? matinal.horasDormidas : null;
@@ -32,31 +34,42 @@ export function dailyMetrics(date, dayRecords = {}) {
     ...(matinal?.doresAcordar || []).map((p) => ({ ...p, tipo: "matinal" })),
     ...(vespertino?.dores || []).map((p) => ({ ...p, tipo: "vespertino" })),
     ...(noturno?.dores || []).map((p) => ({ ...p, tipo: "noturno" })),
+    ...momentosDoDia.flatMap((m) => (m.dores || []).map((p) => ({ ...p, tipo: "momento" }))),
   ];
 
   const comidas = [
     ...(vespertino?.cafeDaManha || []).map((tagId) => ({ tagId, refeicao: "cafe" })),
     ...(vespertino?.almoco || []).map((tagId) => ({ tagId, refeicao: "almoco" })),
     ...(noturno?.jantar || []).map((tagId) => ({ tagId, refeicao: "jantar" })),
+    ...momentosDoDia.flatMap((m) => (m.comidas || []).map((tagId) => ({ tagId, refeicao: "momento" }))),
   ];
 
   const lugares = vespertino?.lugares || [];
-  const atividades = vespertino?.atividades || [];
+  const atividades = [...(vespertino?.atividades || []), ...momentosDoDia.flatMap((m) => m.atividades || [])];
   const pessoas = vespertino?.pessoas || [];
 
   return {
     date,
     humor, energia, sono, estresse, notaGeral, horasDormidas,
     painEntries, comidas, lugares, atividades, pessoas,
-    temAlgumRegistro: Boolean(matinal || vespertino || noturno),
+    temAlgumRegistro: Boolean(matinal || vespertino || noturno || momentosDoDia.length),
   };
 }
 
 /** Constrói o mapa date -> métricas para todo o histórico. */
-export function buildDailySeries(allCheckins) {
+export function buildDailySeries(allCheckins, allMomentos = []) {
   const byDate = groupByDate(allCheckins);
+  const momentosByDate = new Map();
+  allMomentos.forEach((m) => {
+    if (!momentosByDate.has(m.date)) momentosByDate.set(m.date, []);
+    momentosByDate.get(m.date).push(m);
+  });
+
+  const allDates = new Set([...byDate.keys(), ...momentosByDate.keys()]);
   const series = new Map();
-  byDate.forEach((records, date) => series.set(date, dailyMetrics(date, records)));
+  allDates.forEach((date) => {
+    series.set(date, dailyMetrics(date, byDate.get(date) || {}, momentosByDate.get(date) || []));
+  });
   return series;
 }
 

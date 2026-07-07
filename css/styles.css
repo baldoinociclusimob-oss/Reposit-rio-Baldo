@@ -158,6 +158,20 @@ a { color: inherit; }
 .status-badge.done { background: var(--primary-tint); color: var(--primary-dark); }
 .status-badge.pending { background: var(--surface-alt); color: var(--text-muted); }
 
+.momento-add-btn {
+  border: 2px dashed var(--primary);
+  background: transparent;
+  color: var(--primary-dark);
+  margin: 4px 0 20px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 8px 0 10px;
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;

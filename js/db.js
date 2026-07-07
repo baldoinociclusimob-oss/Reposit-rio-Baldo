@@ -4,11 +4,12 @@
 import { normalize } from "./utils/text.js";
 
 const DB_NAME = "diario-vital-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORE_CHECKINS = "checkins";
 const STORE_TAGS = "tags";
 const STORE_SETTINGS = "settings";
+const STORE_MOMENTOS = "momentos";
 
 let dbPromise = null;
 
@@ -34,6 +35,11 @@ function openDb() {
 
       if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
         db.createObjectStore(STORE_SETTINGS, { keyPath: "key" });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_MOMENTOS)) {
+        const store = db.createObjectStore(STORE_MOMENTOS, { keyPath: "id" });
+        store.createIndex("byDate", "date", { unique: false });
       }
     };
 
@@ -145,6 +151,62 @@ export async function bulkPutCheckIns(records) {
   await txDone(t);
 }
 
+/* --------------------------- Momentos (avulsos) --------------------------- */
+// Registros espontâneos: "como estou agora", a qualquer hora, sem vínculo com
+// os 3 check-ins fixos. Podem existir vários no mesmo dia.
+
+export async function saveMomento(momento) {
+  if (!momento.date) throw new Error("Momento precisa de date.");
+  const db = await openDb();
+  const t = tx(db, STORE_MOMENTOS, "readwrite");
+  const store = t.objectStore(STORE_MOMENTOS);
+  const now = new Date().toISOString();
+  const record = {
+    ...momento,
+    id: momento.id || crypto.randomUUID(),
+    createdAt: momento.createdAt || now,
+    updatedAt: now,
+  };
+  store.put(record);
+  await txDone(t);
+  return record;
+}
+
+export async function getMomento(id) {
+  const db = await openDb();
+  const t = tx(db, STORE_MOMENTOS, "readonly");
+  return (await reqToPromise(t.objectStore(STORE_MOMENTOS).get(id))) || null;
+}
+
+export async function getMomentosByDate(date) {
+  const db = await openDb();
+  const t = tx(db, STORE_MOMENTOS, "readonly");
+  const idx = t.objectStore(STORE_MOMENTOS).index("byDate");
+  const results = (await reqToPromise(idx.getAll(IDBKeyRange.only(date)))) || [];
+  return results.sort((a, b) => (a.horario || "").localeCompare(b.horario || ""));
+}
+
+export async function getAllMomentos() {
+  const db = await openDb();
+  const t = tx(db, STORE_MOMENTOS, "readonly");
+  return (await reqToPromise(t.objectStore(STORE_MOMENTOS).getAll())) || [];
+}
+
+export async function deleteMomento(id) {
+  const db = await openDb();
+  const t = tx(db, STORE_MOMENTOS, "readwrite");
+  t.objectStore(STORE_MOMENTOS).delete(id);
+  await txDone(t);
+}
+
+export async function bulkPutMomentos(records) {
+  const db = await openDb();
+  const t = tx(db, STORE_MOMENTOS, "readwrite");
+  const store = t.objectStore(STORE_MOMENTOS);
+  for (const r of records) store.put(r);
+  await txDone(t);
+}
+
 /* ------------------------------- Tags ------------------------------- */
 
 export async function getAllTags(categoria) {
@@ -245,13 +307,14 @@ export async function setSetting(key, value) {
 /* ------------------------------ Export ------------------------------ */
 
 export async function exportAllData() {
-  const [checkins, tags] = await Promise.all([getAllCheckIns(), getAllTags()]);
+  const [checkins, tags, momentos] = await Promise.all([getAllCheckIns(), getAllTags(), getAllMomentos()]);
   return {
     exportedAt: new Date().toISOString(),
     version: DB_VERSION,
     checkins,
     tags,
+    momentos,
   };
 }
 
-export const STORES = { STORE_CHECKINS, STORE_TAGS, STORE_SETTINGS };
+export const STORES = { STORE_CHECKINS, STORE_TAGS, STORE_SETTINGS, STORE_MOMENTOS };
