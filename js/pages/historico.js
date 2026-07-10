@@ -33,12 +33,12 @@ export async function renderHistoricoMonthPage({ year, month } = {}) {
 
   const nav = h("div", { class: "month-nav" }, [
     h("button", {
-      class: "icon-btn", text: "‹",
+      class: "icon-btn", text: "‹", "aria-label": "Mês anterior",
       onClick: () => navigate(monthUrl(y, m - 1)),
     }),
     h("h2", { text: monthLabel(y, m) }),
     h("button", {
-      class: "icon-btn", text: "›",
+      class: "icon-btn", text: "›", "aria-label": "Próximo mês",
       onClick: () => navigate(monthUrl(y, m + 1)),
     }),
   ]);
@@ -55,10 +55,16 @@ export async function renderHistoricoMonthPage({ year, month } = {}) {
     const dots = CHECKIN_ORDER.map((tipo) =>
       h("span", { class: "dot" + (isCheckInFilled(dayRecords[tipo]) ? " filled" : "") })
     );
+    const goToDay = () => navigate(`/historico/dia/${key}`);
     cells.push(
       h("div", {
         class: "calendar-day" + (key === todayKey() ? " today" : ""),
-        onClick: () => navigate(`/historico/dia/${key}`),
+        role: "button", tabindex: "0",
+        "aria-label": `Ver ${formatKeyLong(key)}`,
+        onClick: goToDay,
+        onKeydown: (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToDay(); }
+        },
       }, [
         h("span", { text: String(d) }),
         h("div", { class: "dots" }, dots),

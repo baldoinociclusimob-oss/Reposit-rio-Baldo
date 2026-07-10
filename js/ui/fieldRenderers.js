@@ -12,8 +12,19 @@ const BOOL3_OPTIONS = [
   { val: "nao_sei", label: "Não sei" },
 ];
 
+let fieldIdCounter = 0;
+
+/** Quando control é um <input>/<textarea>/<select> direto, associa via
+ * for/id (padrão mais robusto para leitores de tela); nos campos compostos
+ * (escalas, tags, listas) o label continua descrevendo o grupo visualmente. */
 function fieldWrap(label, control) {
-  return h("div", { class: "field" }, [h("label", { class: "field-label", text: label }), control]);
+  const labelProps = { class: "field-label", text: label };
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(control.tagName)) {
+    const id = `field-${++fieldIdCounter}`;
+    control.id = id;
+    labelProps.for = id;
+  }
+  return h("div", { class: "field" }, [h("label", labelProps), control]);
 }
 
 function renderScale5(field, value, onChange) {

@@ -1,0 +1,12 @@
+{
+  "name": "diario-vital",
+  "private": true,
+  "type": "module",
+  "description": "Diário Vital — app estático, sem build. package.json existe só para os testes automatizados (Playwright) no CI.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

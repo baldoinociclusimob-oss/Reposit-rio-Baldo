@@ -14,6 +14,9 @@ html, body { margin: 0; padding: 0; }
   --primary-tint: #e3ebe4;
   --accent: #c98a5e;
   --danger: #b5564a;
+  /* Texto escuro fixo (não muda com o tema) para usar sobre fundos coloridos
+     saturados — dá muito mais contraste que branco nesses tons pastéis. */
+  --on-color: #21201c;
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 22px;
@@ -184,7 +187,7 @@ a { color: inherit; }
   transition: transform .08s ease, box-shadow .15s ease;
 }
 .btn:active { transform: scale(0.97); }
-.btn-primary { background: var(--primary); color: #fff; box-shadow: var(--shadow); }
+.btn-primary { background: var(--primary); color: var(--on-color); box-shadow: var(--shadow); }
 .btn-primary:hover { background: var(--primary-dark); }
 .btn-ghost { background: transparent; color: var(--primary-dark); }
 .btn-danger { background: transparent; color: var(--danger); }
@@ -235,11 +238,11 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
   transition: transform .1s ease, border-color .15s ease;
 }
 .scale-btn:active { transform: scale(0.94); }
-.scale-btn[data-val="1"].active { background: var(--scale-1); border-color: var(--scale-1); color: #fff; }
-.scale-btn[data-val="2"].active { background: var(--scale-2); border-color: var(--scale-2); color: #fff; }
-.scale-btn[data-val="3"].active { background: var(--scale-3); border-color: var(--scale-3); color: #fff; }
-.scale-btn[data-val="4"].active { background: var(--scale-4); border-color: var(--scale-4); color: #fff; }
-.scale-btn[data-val="5"].active { background: var(--scale-5); border-color: var(--scale-5); color: #fff; }
+.scale-btn[data-val="1"].active { background: var(--scale-1); border-color: var(--scale-1); color: var(--on-color); }
+.scale-btn[data-val="2"].active { background: var(--scale-2); border-color: var(--scale-2); color: var(--on-color); }
+.scale-btn[data-val="3"].active { background: var(--scale-3); border-color: var(--scale-3); color: var(--on-color); }
+.scale-btn[data-val="4"].active { background: var(--scale-4); border-color: var(--scale-4); color: var(--on-color); }
+.scale-btn[data-val="5"].active { background: var(--scale-5); border-color: var(--scale-5); color: var(--on-color); }
 
 /* Mood emoji selector */
 .mood-row { display: flex; gap: 8px; justify-content: space-between; }
@@ -286,7 +289,7 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
   cursor: pointer;
   color: var(--text);
 }
-.tag-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.tag-chip.active { background: var(--primary); border-color: var(--primary); color: var(--on-color); }
 .tag-chip .remove { opacity: .7; font-weight: 900; margin-left: 2px; }
 
 .tag-input-wrap { position: relative; }
@@ -325,13 +328,13 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
   border: 1px solid var(--border); background: var(--surface);
   font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted);
 }
-.mini-scale button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.mini-scale button.active { background: var(--accent); border-color: var(--accent); color: var(--on-color); }
 .toggle-chip {
   display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
   border: 1px solid var(--border); background: var(--surface); font-size: 12px; font-weight: 700;
   color: var(--text-muted); cursor: pointer;
 }
-.toggle-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toggle-chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-color); }
 
 /* Fotos de sintomas */
 .photo-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
@@ -378,7 +381,7 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
   flex: 1; padding: 9px; border-radius: var(--radius-sm); border: 1px solid var(--border);
   background: var(--surface); font-weight: 700; font-size: 13px; color: var(--text-muted); cursor: pointer;
 }
-.range-switch button.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.range-switch button.active { background: var(--primary); border-color: var(--primary); color: var(--on-color); }
 
 .chart-wrap { overflow-x: auto; }
 .chart-wrap svg { display: block; }
@@ -455,7 +458,7 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
 /* ---------- Install banner ---------- */
 .install-banner {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-color);
   padding: 12px 16px;
   position: relative;
   z-index: 50;
@@ -464,12 +467,12 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
 .install-banner-icon { font-size: 20px; flex-shrink: 0; }
 .install-banner-text { flex: 1; min-width: 0; }
 .install-banner-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
-.install-banner-text p { font-size: 12px; margin: 0; opacity: 0.92; }
+.install-banner-text p { font-size: 12px; margin: 0; opacity: 0.85; }
 .install-banner-close {
-  background: none; border: none; color: #fff; font-size: 20px; line-height: 1;
+  background: none; border: none; color: var(--on-color); font-size: 20px; line-height: 1;
   cursor: pointer; padding: 2px 4px; flex-shrink: 0;
 }
-.install-banner .btn-ghost { color: #fff; text-decoration: underline; margin-top: 6px; padding: 4px 0; }
+.install-banner .btn-ghost { color: var(--on-color); text-decoration: underline; margin-top: 6px; padding: 4px 0; }
 .install-banner-steps {
   margin: 8px 0 0; padding-left: 20px; font-size: 12px; line-height: 1.5;
 }
