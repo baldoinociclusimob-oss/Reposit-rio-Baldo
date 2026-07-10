@@ -12,6 +12,11 @@ import { h, mount } from "./ui/dom.js";
 import { startReminderLoop } from "./notifications.js";
 import { getAuthSettings, isUnlockedThisSession, markUnlocked } from "./auth.js";
 import { renderLockScreen } from "./pages/lock.js";
+import { renderConsultaPage } from "./pages/consulta.js";
+import { ensurePersistentStorage } from "./storageProtection.js";
+import { renderInstallBanner } from "./ui/banner.js";
+import { runAutoBackupIfDue } from "./autoBackup.js";
+import { updateBadge } from "./badge.js";
 
 route("/hoje", renderHojePage);
 route("/checkin/:tipo", ({ tipo }) => renderCheckinPage({ tipo }));
@@ -27,6 +32,7 @@ route("/descobertas", renderDescobertasPage);
 route("/ajustes", renderAjustesPage);
 route("/tags", renderTagsPage);
 route("/perfil", renderPerfilPage);
+route("/consulta", renderConsultaPage);
 
 setNotFound(async () => {
   mount(document.getElementById("app"), h("div", { class: "page-header" }, [h("h1", { text: "Página não encontrada" })]));
@@ -35,6 +41,10 @@ setNotFound(async () => {
 function startApp() {
   startRouter();
   startReminderLoop();
+  renderInstallBanner();
+  updateBadge();
+  ensurePersistentStorage();
+  runAutoBackupIfDue();
 }
 
 async function boot() {

@@ -3,6 +3,7 @@
 
 import { exportAllData, bulkPutCheckIns, bulkPutTags, bulkPutMomentos } from "./db.js";
 import { CHECKIN_TYPES } from "./checkinSchema.js";
+import { markBackupDone } from "./autoBackup.js";
 
 function downloadBlob(content, filename, mime) {
   const blob = new Blob([content], { type: mime });
@@ -24,6 +25,7 @@ function todayStamp() {
 export async function exportJSON() {
   const data = await exportAllData();
   downloadBlob(JSON.stringify(data, null, 2), `diario-vital-backup-${todayStamp()}.json`, "application/json");
+  await markBackupDone();
 }
 
 function csvEscape(value) {

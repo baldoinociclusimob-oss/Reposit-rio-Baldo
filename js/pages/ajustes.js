@@ -10,6 +10,12 @@ import {
   getAuthSettings, setPassword, verifyPassword, disableLock,
   platformBiometricAvailable, enableFaceId, disableFaceId,
 } from "../auth.js";
+import { ensurePersistentStorage, isStoragePersisted, isIOS, isStandalone } from "../storageProtection.js";
+import {
+  fileSystemAccessSupported, chooseBackupFolder, getBackupFolderHandle, clearBackupFolder,
+  getLastBackupAt, daysSince, BACKUP_NUDGE_DAYS,
+} from "../autoBackup.js";
+import { gerarICSLembretes, baixarICS } from "../utils/ics.js";
 
 export async function renderAjustesPage() {
   const app = document.getElementById("app");
@@ -30,11 +36,13 @@ export async function renderAjustesPage() {
     h("button", { class: "btn btn-primary", type: "button", text: "Abrir", onClick: () => navigate("/tags") }),
   ]);
 
+  const protectionCard = h("div", { class: "card" }, []);
+
   const backupCard = h("div", { class: "card" }, [
-    h("div", { class: "card-title", text: "💾 Backup dos dados" }),
+    h("div", { class: "card-title", text: "💾 Backup manual" }),
     h("div", { class: "card-sub", text: "Seus dados ficam só neste aparelho. Exporte regularmente para não perder nada." }),
     h("div", { class: "stack" }, [
-      h("button", { class: "btn btn-primary btn-block", type: "button", text: "Exportar tudo (JSON)", onClick: async () => { await exportJSON(); showToast("Backup JSON exportado"); } }),
+      h("button", { class: "btn btn-primary btn-block", type: "button", text: "Exportar tudo (JSON)", onClick: async () => { await exportJSON(); showToast("Backup JSON exportado"); await renderProtection(protectionCard); } }),
       h("button", { class: "btn btn-block", type: "button", text: "Exportar planilha (CSV)", onClick: async () => { await exportCSV(); showToast("Planilha CSV exportada"); } }),
       h("label", { class: "btn btn-ghost btn-block", style: "cursor:pointer;" }, [
         "Importar backup (JSON)",
@@ -59,9 +67,85 @@ export async function renderAjustesPage() {
   ]);
 
   const remindersCard = h("div", { class: "card" }, []);
-  mount(app, header, perfilCard, securityCard, tagsCard, backupCard, remindersCard);
+  mount(app, header, perfilCard, securityCard, protectionCard, backupCard, tagsCard, remindersCard);
   await renderReminders(remindersCard);
   await renderSeguranca(securityCard);
+  await renderProtection(protectionCard);
+}
+
+async function renderProtection(card) {
+  clear(card);
+  card.appendChild(h("div", { class: "card-title", text: "🛡️ Proteção de dados" }));
+
+  const persisted = await isStoragePersisted();
+  const statusRow = h("div", { class: "settings-row" }, [
+    h("div", {}, [
+      h("div", { class: "label", text: "Armazenamento persistente" }),
+      h("div", { class: "desc", text: "Pede ao navegador para não apagar seus dados automaticamente." }),
+    ]),
+    h("span", {
+      class: "status-badge " + (persisted ? "done" : "pending"),
+      text: persisted === null ? "N/D" : persisted ? "Concedido" : "Negado",
+    }),
+  ]);
+  card.appendChild(statusRow);
+
+  if (persisted === false) {
+    card.appendChild(h("button", {
+      class: "btn btn-sm btn-ghost", type: "button", text: "Tentar novamente",
+      onClick: async () => { await ensurePersistentStorage(); await renderProtection(card); },
+    }));
+  }
+
+  if (isIOS() && !isStandalone()) {
+    card.appendChild(h("p", {
+      class: "card-sub",
+      text: "⚠️ Você está usando pelo Safari, não instalado. No iPhone, isso significa risco real de o sistema apagar seus dados após um tempo sem abrir o app. Adicione à Tela de Início (veja o aviso no topo da tela Hoje).",
+    }));
+  }
+
+  const lastBackup = await getLastBackupAt();
+  const days = daysSince(lastBackup);
+  const backupInfo = h("p", {
+    class: "card-sub",
+    text: lastBackup
+      ? `Último backup: ${days === 0 ? "hoje" : days === 1 ? "há 1 dia" : `há ${days} dias`}.`
+      : "Você ainda não fez nenhum backup.",
+  });
+  if (days !== null && days >= BACKUP_NUDGE_DAYS) {
+    backupInfo.style.color = "var(--danger)";
+    backupInfo.style.fontWeight = "700";
+  }
+  card.appendChild(backupInfo);
+
+  if (fileSystemAccessSupported()) {
+    const handle = await getBackupFolderHandle();
+    if (handle) {
+      card.appendChild(h("div", { class: "settings-row" }, [
+        h("div", {}, [
+          h("div", { class: "label", text: "Backup automático semanal" }),
+          h("div", { class: "desc", text: `Pasta: ${handle.name}` }),
+        ]),
+        h("button", {
+          class: "btn btn-sm btn-ghost", type: "button", text: "Remover",
+          onClick: async () => { await clearBackupFolder(); showToast("Backup automático desativado"); await renderProtection(card); },
+        }),
+      ]));
+    } else {
+      card.appendChild(h("button", {
+        class: "btn btn-block", type: "button", text: "📁 Escolher pasta para backup automático semanal",
+        onClick: async () => {
+          try {
+            await chooseBackupFolder();
+            showToast("Pasta configurada — o backup roda sozinho a cada 7 dias");
+            await renderProtection(card);
+          } catch {
+            // usuário cancelou o seletor de pasta
+          }
+        },
+      }));
+    }
+  }
 }
 
 async function renderSeguranca(card) {

@@ -5,6 +5,7 @@ import { formatKeyLong, todayKey, isToday, nowHHMM } from "../utils/date.js";
 import { renderField } from "../ui/fieldRenderers.js";
 import { navigate } from "../router.js";
 import { showToast } from "../ui/toast.js";
+import { updateBadge } from "../badge.js";
 
 export async function renderCheckinPage({ tipo, date }) {
   const app = document.getElementById("app");
@@ -32,6 +33,7 @@ export async function renderCheckinPage({ tipo, date }) {
     const record = await saveCheckIn({ date: dateKey, tipo, ...data });
     savedStatus.textContent = "Salvo ✓";
     Object.assign(existing, record);
+    if (isToday(dateKey)) updateBadge();
   }
 
   const fieldsContainer = h("div", {});
