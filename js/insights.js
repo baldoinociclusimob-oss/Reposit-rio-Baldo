@@ -1,19 +1,43 @@
-// Motor de Descobertas: procura padrões simples no histórico e os descreve
-// em linguagem de tendência (nunca de certeza médica), sempre informando a
-// base de dados usada. Nada daqui é enviado para fora do aparelho.
+// Motor de Descobertas: procura padrões no histórico e os descreve em
+// linguagem de tendência (nunca de certeza médica), sempre informando a base
+// de dados usada. Nada daqui é enviado para fora do aparelho.
+//
+// v2: comparações fator×sintoma (comida/medicamento × dor) usam uma tabela
+// 2x2 + teste exato de Fisher como filtro estatístico (não exibido ao
+// usuário) e correção de Benjamini-Hochberg para comparações múltiplas,
+// testando também a janela "dia seguinte" além do mesmo dia. Comparações de
+// médias contínuas (humor, energia, estresse) continuam por diferença de
+// médias — não é um teste categórico, então não usamos Fisher nelas.
 
 import { getAllCheckIns, getAllTags, getAllMomentos, getAllCiclo } from "./db.js";
 import { buildDailySeries, avg } from "./aggregate.js";
-import { weekdayLabel } from "./utils/date.js";
+import { weekdayLabel, addDaysToKey } from "./utils/date.js";
+import { tabela2x2, fisherExato, benjaminiHochberg } from "./utils/stats.js";
 
 export const MIN_DAYS = 5;
+const MAX_INSIGHTS = 8;
+const FISHER_P_MAX = 0.05;
+const MIN_DIFF_PROPORCAO = 0.25;
 
-const PERIODO_LABEL = { matinal: "ao acordar", vespertino: "durante o dia", noturno: "à noite" };
+const PERIODO_LABEL = { matinal: "ao acordar", vespertino: "durante o dia", noturno: "à noite", momento: "registro avulso" };
 
 function topEntry(counts) {
   const entries = Object.entries(counts);
   if (entries.length === 0) return null;
   return entries.sort((a, b) => b[1] - a[1])[0];
+}
+
+/** "recente" se a maioria das ocorrências do fator está nos últimos 14 dias
+ * do período analisado e ainda não há histórico anterior suficiente;
+ * "consistente" se as ocorrências se espalham pelo período todo. */
+function stabilityTag(dateSet, allDatesSorted) {
+  const dates = [...dateSet].sort();
+  if (dates.length < 6 || allDatesSorted.length < 14) return null;
+  const last14Start = allDatesSorted[Math.max(0, allDatesSorted.length - 14)];
+  const recentCount = dates.filter((d) => d >= last14Start).length;
+  const olderCount = dates.length - recentCount;
+  if (recentCount >= dates.length * 0.5 && olderCount < MIN_DAYS) return "recente";
+  return "consistente";
 }
 
 function painFrequencyInsights(days, tagById) {
@@ -49,52 +73,99 @@ function painFrequencyInsights(days, tagById) {
   return results;
 }
 
-function foodSymptomInsights(days, tagById) {
-  const foodDays = new Map();
-  const painDays = new Map();
-  const allDates = new Set(days.map((d) => d.date));
+/**
+ * Compara dias com um fator presente (comida ou medicamento) contra dias
+ * sem ele, testando a janela "mesmo dia" e "dia seguinte" para cada par
+ * fator×sintoma, e usa Fisher exato + Benjamini-Hochberg como filtro
+ * estatístico (nunca exibido ao usuário — só decide o que aparece).
+ */
+function factorSymptomInsights(days, tagById, getFactorItems, factorCategoryLabel, { reverseCausality = false } = {}) {
+  const allDates = days.map((d) => d.date).sort();
+  const dateSet = new Set(allDates);
 
+  const factorDays = new Map();
+  const symptomDays = new Map();
   days.forEach((d) => {
-    d.comidas.forEach((c) => {
-      if (!foodDays.has(c.tagId)) foodDays.set(c.tagId, new Set());
-      foodDays.get(c.tagId).add(d.date);
+    getFactorItems(d).forEach((item) => {
+      if (!item.tagId) return;
+      if (!factorDays.has(item.tagId)) factorDays.set(item.tagId, new Set());
+      factorDays.get(item.tagId).add(d.date);
     });
     d.painEntries.forEach((p) => {
       if (!p.tagId) return;
-      if (!painDays.has(p.tagId)) painDays.set(p.tagId, new Set());
-      painDays.get(p.tagId).add(d.date);
+      if (!symptomDays.has(p.tagId)) symptomDays.set(p.tagId, new Set());
+      symptomDays.get(p.tagId).add(d.date);
     });
   });
 
-  const results = [];
-  for (const [foodId, withFood] of foodDays) {
-    if (withFood.size < MIN_DAYS) continue;
-    const withoutFood = [...allDates].filter((d) => !withFood.has(d));
-    if (withoutFood.length < MIN_DAYS) continue;
+  function shiftDates(dates, offsetDays) {
+    if (offsetDays === 0) return dates;
+    const out = new Set();
+    dates.forEach((d) => {
+      const shifted = addDaysToKey(d, offsetDays);
+      if (dateSet.has(shifted)) out.add(shifted);
+    });
+    return out;
+  }
 
-    for (const [painId, painSet] of painDays) {
-      const withFoodAndPain = [...withFood].filter((d) => painSet.has(d)).length;
-      const withoutFoodAndPain = withoutFood.filter((d) => painSet.has(d)).length;
-      const pctWith = withFoodAndPain / withFood.size;
-      const pctWithout = withoutFoodAndPain / withoutFood.length;
-      const diff = pctWith - pctWithout;
-      if (diff < 0.2) continue;
+  const candidates = [];
+  for (const [factorId, rawFactorDates] of factorDays) {
+    if (rawFactorDates.size < MIN_DAYS) continue;
+    for (const [symptomId, symptomDateSet] of symptomDays) {
+      let melhor = null;
+      for (const [janela, offset] of [["mesmo dia", 0], ["dia seguinte", 1]]) {
+        const comFator = shiftDates(rawFactorDates, offset);
+        if (comFator.size < MIN_DAYS) continue;
+        const semFatorCount = allDates.length - comFator.size;
+        if (semFatorCount < MIN_DAYS) continue;
 
-      const foodName = tagById.get(foodId)?.nome || "esse alimento";
-      const painName = tagById.get(painId)?.nome || "essa dor";
-      results.push({
-        id: `comida-dor-${foodId}-${painId}`,
-        category: "comida-dor",
-        text: `Em ${Math.round(pctWith * 100)}% dos dias em que você comeu "${foodName}", também registrou "${painName}", contra ${Math.round(pctWithout * 100)}% nos outros dias.`,
-        base: `baseado em ${withFood.size} dias com "${foodName}"`,
-        strength: diff,
-      });
+        const { a, b, c, d } = tabela2x2(comFator, symptomDateSet, allDates);
+        if (a + b === 0 || c + d === 0) continue;
+        const pctCom = a / (a + b);
+        const pctSem = c / (c + d);
+        const diff = pctCom - pctSem;
+        if (diff <= 0) continue;
+        if (!melhor || diff > melhor.diff) {
+          melhor = { janela, comFator, a, b, c, d, pctCom, pctSem, diff, p: fisherExato(a, b, c, d) };
+        }
+      }
+      if (!melhor || melhor.diff < MIN_DIFF_PROPORCAO) continue;
+      candidates.push({ factorId, symptomId, ...melhor });
     }
   }
+
+  const passBH = benjaminiHochberg(candidates.map((c) => c.p), 0.05);
+
+  const results = [];
+  candidates.forEach((c, i) => {
+    if (!passBH[i] || c.p >= FISHER_P_MAX) return;
+    const factorName = tagById.get(c.factorId)?.nome || "esse item";
+    const symptomName = tagById.get(c.symptomId)?.nome || "esse sintoma";
+    const estabilidade = stabilityTag(c.comFator, allDates);
+    const estabilidadeTexto = estabilidade ? ` (padrão ${estabilidade})` : "";
+
+    let text;
+    if (reverseCausality) {
+      text = `Você costuma registrar "${factorName}" nos dias com "${symptomName}" (${Math.round(c.pctCom * 100)}% dos dias com "${symptomName}", contra ${Math.round(c.pctSem * 100)}% nos outros)${estabilidadeTexto} — padrão esperado quando o remédio é tomado por causa do sintoma, não sinal de que ele o cause.`;
+    } else if (c.janela === "dia seguinte") {
+      text = `Em ${Math.round(c.pctCom * 100)}% dos dias seguintes a você registrar "${factorName}", também registrou "${symptomName}", contra ${Math.round(c.pctSem * 100)}% nos outros dias${estabilidadeTexto}.`;
+    } else {
+      text = `Em ${Math.round(c.pctCom * 100)}% dos dias em que você registrou "${factorName}", também registrou "${symptomName}" no mesmo dia, contra ${Math.round(c.pctSem * 100)}% nos outros dias${estabilidadeTexto}.`;
+    }
+
+    results.push({
+      id: `${factorCategoryLabel}-dor-${c.factorId}-${c.symptomId}`,
+      category: `${factorCategoryLabel}-dor`,
+      text,
+      base: `baseado em ${c.comFator.size} dias com "${factorName}"${c.janela === "dia seguinte" ? ", considerando o dia seguinte" : ""}`,
+      strength: c.diff,
+    });
+  });
   return results;
 }
 
 function moodByTagInsights(days, tagById, getIds, categoryLabel) {
+  const allDates = days.map((d) => d.date).sort();
   const tagDaySets = new Map();
   days.forEach((d) => {
     (getIds(d) || []).forEach((tagId) => {
@@ -118,10 +189,11 @@ function moodByTagInsights(days, tagById, getIds, categoryLabel) {
 
     const nome = tagById.get(tagId)?.nome || "isso";
     const direcao = diff > 0 ? "melhor" : "pior";
+    const estabilidade = stabilityTag(dateSet, allDates);
     results.push({
       id: `${categoryLabel}-humor-${tagId}`,
       category: `${categoryLabel}-humor`,
-      text: `Seu humor parece ${direcao} em dias com "${nome}" (média ${avgWith.toFixed(1)} contra ${avgWithout.toFixed(1)} em uma escala de 1 a 5).`,
+      text: `Seu humor parece ${direcao} em dias com "${nome}" (média ${avgWith.toFixed(1)} contra ${avgWithout.toFixed(1)} em uma escala de 1 a 5)${estabilidade ? ` (padrão ${estabilidade})` : ""}.`,
       base: `baseado em ${withHumor.length} dias com "${nome}"`,
       strength: Math.abs(diff) / 4,
     });
@@ -150,6 +222,7 @@ function sleepNextDayInsights(days) {
 }
 
 function activityInsights(days, tagById) {
+  const allDates = days.map((d) => d.date).sort();
   const tagDaySets = new Map();
   days.forEach((d) => {
     (d.atividades || []).forEach((tagId) => {
@@ -173,10 +246,11 @@ function activityInsights(days, tagById) {
 
       const nome = tagById.get(tagId)?.nome || "essa atividade";
       const direcao = diff > 0 ? "maior" : "menor";
+      const estabilidade = stabilityTag(dateSet, allDates);
       out.push({
         id: `atividade-${metricKey}-${tagId}`,
         category: `atividade-${metricKey}`,
-        text: `Seu(sua) ${metricLabel} tende a ser ${direcao} em dias com "${nome}" (média ${avgWith.toFixed(1)} contra ${avgWithout.toFixed(1)}).`,
+        text: `Seu(sua) ${metricLabel} tende a ser ${direcao} em dias com "${nome}" (média ${avgWith.toFixed(1)} contra ${avgWithout.toFixed(1)})${estabilidade ? ` (padrão ${estabilidade})` : ""}.`,
         base: `baseado em ${withVals.length} dias com "${nome}"`,
         strength: Math.abs(diff) / 4,
       });
@@ -203,7 +277,8 @@ export async function generateInsights({ startDate, endDate } = {}) {
 
   const insights = [
     ...painFrequencyInsights(days, tagById),
-    ...foodSymptomInsights(days, tagById),
+    ...factorSymptomInsights(days, tagById, (d) => d.comidas, "comida"),
+    ...factorSymptomInsights(days, tagById, (d) => d.medicamentos || [], "medicamento", { reverseCausality: true }),
     ...moodByTagInsights(days, tagById, (d) => d.lugares, "lugar"),
     ...moodByTagInsights(days, tagById, (d) => d.pessoas, "pessoa"),
     ...sleepNextDayInsights(days),
@@ -212,7 +287,7 @@ export async function generateInsights({ startDate, endDate } = {}) {
 
   insights.sort((a, b) => b.strength - a.strength);
 
-  return { insights, totalDaysComRegistro };
+  return { insights: insights.slice(0, MAX_INSIGHTS), totalDaysComRegistro };
 }
 
 export function strengthLabel(strength) {
