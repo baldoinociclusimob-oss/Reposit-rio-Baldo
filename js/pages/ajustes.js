@@ -282,17 +282,37 @@ async function renderReminders(card) {
   clear(card);
   card.appendChild(h("div", { class: "card-title", text: "🔔 Lembretes" }));
 
-  if (!notificationsSupported()) {
-    card.appendChild(h("div", { class: "card-sub", text: "Este navegador não suporta notificações." }));
-    return;
-  }
+  const settings = await getReminderSettings();
 
   card.appendChild(h("div", {
     class: "card-sub",
-    text: "Avisos opcionais nos horários dos check-ins. Funcionam enquanto o Diário Vital estiver aberto no navegador.",
+    text: "O jeito confiável de ser lembrado é pelo calendário do próprio celular — funciona mesmo com o app fechado. A notificação do navegador (mais abaixo) é só um extra, e exige o app aberto.",
   }));
 
-  const settings = await getReminderSettings();
+  card.appendChild(h("button", {
+    class: "btn btn-primary btn-block", type: "button", text: "📅 Adicionar ao calendário do aparelho",
+    onClick: async () => {
+      const sequencia = (await getSetting("icsSequencia", 0)) + 1;
+      await setSetting("icsSequencia", sequencia);
+      const lembretes = CHECKIN_ORDER.map((tipo) => ({
+        tipo, titulo: `${CHECKIN_TYPES[tipo].emoji} ${CHECKIN_TYPES[tipo].titulo}`, hora: settings[tipo].hora,
+      }));
+      const ics = gerarICSLembretes(lembretes, { urlApp: location.origin + location.pathname, sequencia });
+      baixarICS(ics);
+      showToast("Arquivo baixado — abra-o e escolha adicionar ao Calendário");
+    },
+  }));
+  card.appendChild(h("p", {
+    class: "card-sub", style: "font-size:12px;",
+    text: "No iPhone, abra o arquivo baixado e toque em \"Adicionar todos\". Se mudar os horários abaixo, gere e importe de novo — a maioria dos calendários atualiza em vez de duplicar (se duplicar, apague os eventos antigos). Alguns calendários (o Google Calendar às vezes) podem ignorar o alarme embutido e usar o lembrete padrão deles.",
+  }));
+
+  if (!notificationsSupported()) {
+    card.appendChild(h("p", { class: "card-sub", text: "Este navegador não suporta notificações extras." }));
+    return;
+  }
+
+  card.appendChild(h("div", { class: "lock-divider", text: "horários e notificação extra no navegador" }));
 
   for (const tipo of CHECKIN_ORDER) {
     const config = CHECKIN_TYPES[tipo];
