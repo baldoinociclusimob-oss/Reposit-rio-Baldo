@@ -19,10 +19,15 @@ test("tag criada no check-in aparece e pode ser renomeada", async ({ page }) => 
   await page.waitForSelector(".card");
   await expect(page.locator("body")).toContainText("Academia");
 
+  // O locator do row é filtrado por texto ("hasText"); depois de clicar em
+  // "Renomear" a linha vira um <input value="Academia">, cujo valor não conta
+  // como texto visível — por isso resolvemos o input renderizado após o
+  // clique diretamente pela página, não mais escopado no locator antigo.
   const row = page.locator(".settings-row", { hasText: "Academia" });
   await row.locator("button", { hasText: "Renomear" }).click();
-  await row.locator("input").fill("Academia do Bairro");
-  await row.locator("button", { hasText: "Salvar" }).click();
+  const editingInput = page.locator(".settings-row input[type=text]");
+  await editingInput.fill("Academia do Bairro");
+  await page.locator(".settings-row button", { hasText: "Salvar" }).click();
   await page.waitForTimeout(300);
 
   await expect(page.locator("body")).toContainText("Academia do Bairro");
