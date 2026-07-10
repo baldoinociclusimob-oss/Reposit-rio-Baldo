@@ -9,8 +9,14 @@ export function momentoSummaryText(momento, tagById) {
   if (momento.dores && momento.dores.length) {
     return momento.dores.map((d) => tagById.get(d.tagId)?.nome || "dor").join(", ");
   }
+  if (momento.medicamentos && momento.medicamentos.length) {
+    return `💊 ${momento.medicamentos.map((m) => tagById.get(m.tagId)?.nome || "medicamento").join(", ")}`;
+  }
   if (momento.humor) {
     return MOOD_OPTIONS.find((o) => o.val === momento.humor)?.label || "Registro";
+  }
+  if (momento.fotos && momento.fotos.length) {
+    return `📷 ${momento.fotos.length} foto${momento.fotos.length > 1 ? "s" : ""}`;
   }
   return "Registro sem detalhes";
 }

@@ -2,6 +2,8 @@ import { h, clear } from "./dom.js";
 import { MOOD_OPTIONS } from "../checkinSchema.js";
 import { createTagMultiField } from "./tagPicker.js";
 import { createPainListField } from "./painList.js";
+import { createMedsListField } from "./medsList.js";
+import { createPhotoListField } from "./photoList.js";
 import { debounce } from "../utils/debounce.js";
 
 const BOOL3_OPTIONS = [
@@ -132,6 +134,16 @@ function renderPainList(field, value, onChange) {
   return fieldWrap(field.label, control);
 }
 
+function renderMedsList(field, value, onChange) {
+  const control = createMedsListField({ value: value || [], onChange });
+  return fieldWrap(field.label, control);
+}
+
+function renderPhotoList(field, value, onChange) {
+  const control = createPhotoListField({ value: value || [], onChange });
+  return fieldWrap(field.label, control);
+}
+
 const RENDERERS = {
   scale5: renderScale5,
   mood: renderMood,
@@ -141,6 +153,8 @@ const RENDERERS = {
   text: renderText,
   "tags-multi": renderTagsMulti,
   "pain-list": renderPainList,
+  "meds-list": renderMedsList,
+  "photo-list": renderPhotoList,
 };
 
 export function renderField(field, value, onChange) {

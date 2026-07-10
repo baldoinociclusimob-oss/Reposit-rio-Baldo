@@ -1,5 +1,6 @@
 import { h, mount, clear } from "../ui/dom.js";
 import { navigate } from "../router.js";
+import { getSetting, setSetting } from "../db.js";
 import { showToast } from "../ui/toast.js";
 import { exportJSON, exportCSV, importJSON } from "../exportImport.js";
 import {
@@ -66,11 +67,31 @@ export async function renderAjustesPage() {
     ]),
   ]);
 
+  const cicloCard = h("div", { class: "card" }, []);
   const remindersCard = h("div", { class: "card" }, []);
-  mount(app, header, perfilCard, securityCard, protectionCard, backupCard, tagsCard, remindersCard);
+  mount(app, header, perfilCard, securityCard, protectionCard, backupCard, tagsCard, cicloCard, remindersCard);
   await renderReminders(remindersCard);
   await renderSeguranca(securityCard);
   await renderProtection(protectionCard);
+  await renderCicloToggle(cicloCard);
+}
+
+async function renderCicloToggle(card) {
+  clear(card);
+  card.appendChild(h("div", { class: "card-title", text: "🩸 Ciclo menstrual (opcional)" }));
+  card.appendChild(h("div", {
+    class: "card-sub",
+    text: "É um dos fatores mais associados a humor, dor e sono. Ative para registrar o fluxo do dia na tela Hoje e considerá-lo nas Descobertas.",
+  }));
+  const ativado = await getSetting("cicloAtivado", false);
+  const switchInput = h("input", {
+    type: "checkbox", checked: ativado,
+    onChange: async (e) => { await setSetting("cicloAtivado", e.target.checked); },
+  });
+  card.appendChild(h("div", { class: "settings-row" }, [
+    h("div", { class: "label", text: "Acompanhar ciclo" }),
+    h("label", { class: "switch" }, [switchInput, h("span", { class: "track" })]),
+  ]));
 }
 
 async function renderProtection(card) {

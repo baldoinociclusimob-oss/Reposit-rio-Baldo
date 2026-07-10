@@ -10,6 +10,7 @@ const CATEGORIES = [
   { key: "atividade", label: "Atividades" },
   { key: "pessoa", label: "Pessoas" },
   { key: "alergia", label: "Alergias" },
+  { key: "medicamento", label: "Medicamentos" },
 ];
 
 export async function renderTagsPage() {

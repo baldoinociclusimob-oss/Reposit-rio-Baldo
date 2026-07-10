@@ -88,8 +88,10 @@ export const MOMENTO_SCHEMA = {
     { key: "horario", type: "time", label: "Hora" },
     { key: "humor", type: "mood", label: "Como está se sentindo" },
     { key: "dores", type: "pain-list", label: "Dores ou sintomas", categoria: "dor" },
+    { key: "medicamentos", type: "meds-list", label: "Medicamentos tomados agora", categoria: "medicamento" },
     { key: "comidas", type: "tags-multi", categoria: "comida", label: "Comeu ou bebeu algo agora" },
     { key: "atividades", type: "tags-multi", categoria: "atividade", label: "O que estava fazendo" },
+    { key: "fotos", type: "photo-list", label: "Fotos (opcional)" },
     { key: "texto", type: "text", label: "O que está acontecendo", placeholder: "ex.: mastiguei um chiclete e o estômago começou a doer" },
   ],
 };

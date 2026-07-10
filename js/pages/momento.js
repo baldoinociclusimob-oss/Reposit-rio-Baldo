@@ -9,8 +9,10 @@ import { showToast } from "../ui/toast.js";
 /**
  * id: presente ao editar um registro espontâneo existente.
  * date: usado só ao criar um novo (padrão hoje).
+ * focus: chave de um campo (ex.: "medicamentos") para rolar/focar ao abrir —
+ * usado pelo atalho "💊 Tomei um remédio" da tela Hoje.
  */
-export async function renderMomentoPage({ id, date }) {
+export async function renderMomentoPage({ id, date, focus }) {
   const app = document.getElementById("app");
 
   const existing = id ? await getMomento(id) : null;
@@ -29,13 +31,14 @@ export async function renderMomentoPage({ id, date }) {
   }
 
   const fieldsContainer = h("div", {});
+  let focusEl = null;
   MOMENTO_SCHEMA.fields.forEach((field) => {
-    fieldsContainer.appendChild(
-      renderField(field, data[field.key], (val) => {
-        data[field.key] = val;
-        persist();
-      })
-    );
+    const el = renderField(field, data[field.key], (val) => {
+      data[field.key] = val;
+      persist();
+    });
+    if (field.key === focus) focusEl = el;
+    fieldsContainer.appendChild(el);
   });
 
   const header = h("div", { class: "page-header" }, [
@@ -75,4 +78,9 @@ export async function renderMomentoPage({ id, date }) {
   }
 
   mount(app, header, fieldsContainer, h("div", { class: "fab-save stack" }, actions));
+
+  if (focusEl) {
+    focusEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    focusEl.querySelector("input, textarea, select, button")?.focus();
+  }
 }

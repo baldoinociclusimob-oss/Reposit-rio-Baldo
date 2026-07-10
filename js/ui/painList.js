@@ -5,7 +5,9 @@ import { BODY_LOCATIONS } from "../checkinSchema.js";
 
 /**
  * Lista repetível de dores: cada entrada tem tag (ex.: "dor de cabeça"),
- * intensidade (1-5) e local no corpo. value: [{tagId, intensidade, local}]
+ * intensidade (1-5), local no corpo e duração (ainda dói / até que hora).
+ * Duração é um dos dados que médicos mais usam e antes não era capturado.
+ * value: [{tagId, intensidade, local, aindaDoi, fim}]
  */
 export function createPainListField({ value = [], onChange }) {
   const container = h("div", {});
@@ -26,7 +28,7 @@ export function createPainListField({ value = [], onChange }) {
   loadTagNames();
 
   function emit() {
-    onChange(entries.map(({ tagId, intensidade, local }) => ({ tagId, intensidade, local })));
+    onChange(entries.map(({ tagId, intensidade, local, aindaDoi, fim }) => ({ tagId, intensidade, local, aindaDoi, fim })));
   }
 
   function renderEntry(entry) {
@@ -74,7 +76,26 @@ export function createPainListField({ value = [], onChange }) {
     ]);
     const localRow = h("div", { class: "pain-sub-row" }, [localSelect]);
 
-    return h("div", { class: "pain-entry" }, [head, intensityRow, localRow]);
+    const fimInput = h("input", {
+      type: "time", value: entry.fim || "", disabled: Boolean(entry.aindaDoi),
+      onInput: (e) => { entry.fim = e.target.value || null; emit(); },
+    });
+    const aindaDoiChip = h("button", {
+      type: "button", class: "toggle-chip" + (entry.aindaDoi ? " active" : ""), text: "Ainda dói",
+      onClick: () => {
+        entry.aindaDoi = !entry.aindaDoi;
+        if (entry.aindaDoi) entry.fim = null;
+        renderList();
+        emit();
+      },
+    });
+    const duracaoRow = h("div", { class: "pain-sub-row" }, [
+      h("label", { text: "Até quando" }),
+      aindaDoiChip,
+      fimInput,
+    ]);
+
+    return h("div", { class: "pain-entry" }, [head, intensityRow, localRow, duracaoRow]);
   }
 
   function renderList() {

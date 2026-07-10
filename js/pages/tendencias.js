@@ -1,5 +1,5 @@
 import { h, mount, clear } from "../ui/dom.js";
-import { getAllCheckIns, getAllMomentos } from "../db.js";
+import { getAllCheckIns, getAllMomentos, getAllCiclo } from "../db.js";
 import { buildDailySeries, weeklyAggregate } from "../aggregate.js";
 import { lastNDayKeys, formatKeyShort, startOfWeek } from "../utils/date.js";
 import { lineChart, barChart } from "../charts.js";
@@ -13,8 +13,8 @@ const METRICS = [
 
 export async function renderTendenciasPage() {
   const app = document.getElementById("app");
-  const [allCheckins, allMomentos] = await Promise.all([getAllCheckIns(), getAllMomentos()]);
-  const series = buildDailySeries(allCheckins, allMomentos);
+  const [allCheckins, allMomentos, allCiclo] = await Promise.all([getAllCheckIns(), getAllMomentos(), getAllCiclo()]);
+  const series = buildDailySeries(allCheckins, allMomentos, allCiclo);
 
   // Primeiro dia com algum registro: evita gráficos com um trecho inicial
   // vazio quando o histórico da pessoa ainda é mais curto que a janela padrão.

@@ -1,7 +1,7 @@
 // Exportação e importação manuais dos dados — o único jeito de tirar uma
 // cópia dos dados do aparelho, já que tudo fica local (sem nuvem, sem servidor).
 
-import { exportAllData, bulkPutCheckIns, bulkPutTags, bulkPutMomentos } from "./db.js";
+import { exportAllData, bulkPutCheckIns, bulkPutTags, bulkPutMomentos, bulkPutCiclo, momentosFromImport } from "./db.js";
 import { CHECKIN_TYPES } from "./checkinSchema.js";
 import { markBackupDone } from "./autoBackup.js";
 
@@ -42,18 +42,28 @@ export async function exportCSV() {
   function tagList(ids) { return (ids || []).map(tagName).join("; "); }
   function painList(entries) {
     return (entries || [])
-      .map((p) => `${tagName(p.tagId)}${p.intensidade ? ` (intensidade ${p.intensidade}${p.local ? `, ${p.local}` : ""})` : ""}`)
+      .map((p) => {
+        const detalhes = [];
+        if (p.intensidade) detalhes.push(`intensidade ${p.intensidade}`);
+        if (p.local) detalhes.push(p.local);
+        if (p.aindaDoi) detalhes.push("ainda dói");
+        else if (p.fim) detalhes.push(`até ${p.fim}`);
+        return `${tagName(p.tagId)}${detalhes.length ? ` (${detalhes.join(", ")})` : ""}`;
+      })
       .join("; ");
   }
   function foodList(entries) {
     return (entries || []).map((tagId) => tagName(tagId)).join("; ");
+  }
+  function medsList(entries) {
+    return (entries || []).map((m) => `${tagName(m.tagId)}${m.dose ? ` (${m.dose})` : ""}`).join("; ");
   }
 
   const columns = [
     "data", "hora", "tipo",
     "qualidade_sono", "horas_dormidas", "acordou_meio_da_noite", "sonhou", "hora_acordou", "hora_dormir",
     "humor", "energia", "nota_geral", "estresse",
-    "cafe_da_manha", "almoco", "jantar",
+    "cafe_da_manha", "almoco", "jantar", "medicamentos",
     "dores", "lugares", "atividades", "pessoas",
     "momento_bom", "momento_ruim", "observacoes",
   ];
@@ -82,6 +92,7 @@ export async function exportCSV() {
         foodList(c.cafeDaManha),
         foodList(c.almoco),
         foodList(c.jantar),
+        "",
         painList(dores),
         tagList(c.lugares),
         tagList(c.atividades),
@@ -100,7 +111,7 @@ export async function exportCSV() {
         m.date, m.horario ?? "", "momento",
         "", "", "", "", "", "",
         m.humor ?? "", "", "", "",
-        foodList(m.comidas), "", "",
+        foodList(m.comidas), "", "", medsList(m.medicamentos),
         painList(m.dores), "", tagList(m.atividades), "",
         "", "", m.texto ?? "",
       ].map(csvEscape);
@@ -126,11 +137,14 @@ export async function importJSON(file) {
   const validTipos = new Set(Object.keys(CHECKIN_TYPES));
   const checkins = data.checkins.filter((c) => c && c.date && validTipos.has(c.tipo));
   const tags = data.tags.filter((t) => t && t.id && t.categoria && t.nome);
-  const momentos = Array.isArray(data.momentos) ? data.momentos.filter((m) => m && m.id && m.date) : [];
+  const momentosRaw = Array.isArray(data.momentos) ? data.momentos.filter((m) => m && m.id && m.date) : [];
+  const momentos = momentosFromImport(momentosRaw);
+  const ciclo = Array.isArray(data.ciclo) ? data.ciclo.filter((c) => c && c.date) : [];
 
   await bulkPutTags(tags);
   await bulkPutCheckIns(checkins);
   if (momentos.length) await bulkPutMomentos(momentos);
+  if (ciclo.length) await bulkPutCiclo(ciclo);
 
   return { checkinsCount: checkins.length, tagsCount: tags.length, momentosCount: momentos.length };
 }

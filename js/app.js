@@ -22,6 +22,7 @@ route("/hoje", renderHojePage);
 route("/checkin/:tipo", ({ tipo }) => renderCheckinPage({ tipo }));
 route("/checkin/:tipo/:date", ({ tipo, date }) => renderCheckinPage({ tipo, date }));
 route("/momento/novo/:date", ({ date }) => renderMomentoPage({ date }));
+route("/momento/novo/:date/:focus", ({ date, focus }) => renderMomentoPage({ date, focus }));
 route("/momento/:id", ({ id }) => renderMomentoPage({ id }));
 
 route("/historico", () => renderHistoricoMonthPage({}));

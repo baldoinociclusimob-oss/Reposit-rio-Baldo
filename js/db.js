@@ -4,12 +4,13 @@
 import { normalize } from "./utils/text.js";
 
 const DB_NAME = "diario-vital-db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const STORE_CHECKINS = "checkins";
 const STORE_TAGS = "tags";
 const STORE_SETTINGS = "settings";
 const STORE_MOMENTOS = "momentos";
+const STORE_CICLO = "ciclo";
 
 let dbPromise = null;
 
@@ -40,6 +41,10 @@ function openDb() {
       if (!db.objectStoreNames.contains(STORE_MOMENTOS)) {
         const store = db.createObjectStore(STORE_MOMENTOS, { keyPath: "id" });
         store.createIndex("byDate", "date", { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains(STORE_CICLO)) {
+        db.createObjectStore(STORE_CICLO, { keyPath: "date" });
       }
     };
 
@@ -207,6 +212,41 @@ export async function bulkPutMomentos(records) {
   await txDone(t);
 }
 
+/* --------------------------- Ciclo (opcional) --------------------------- */
+// Fica de fora por padrão — só existe registro se a pessoa ativar em Ajustes.
+
+export async function setCicloFluxo(date, fluxo) {
+  const db = await openDb();
+  const t = tx(db, STORE_CICLO, "readwrite");
+  if (fluxo === null || fluxo === undefined) {
+    t.objectStore(STORE_CICLO).delete(date);
+  } else {
+    t.objectStore(STORE_CICLO).put({ date, fluxo, updatedAt: new Date().toISOString() });
+  }
+  await txDone(t);
+}
+
+export async function getCicloFluxo(date) {
+  const db = await openDb();
+  const t = tx(db, STORE_CICLO, "readonly");
+  const rec = await reqToPromise(t.objectStore(STORE_CICLO).get(date));
+  return rec ? rec.fluxo : null;
+}
+
+export async function getAllCiclo() {
+  const db = await openDb();
+  const t = tx(db, STORE_CICLO, "readonly");
+  return (await reqToPromise(t.objectStore(STORE_CICLO).getAll())) || [];
+}
+
+export async function bulkPutCiclo(records) {
+  const db = await openDb();
+  const t = tx(db, STORE_CICLO, "readwrite");
+  const store = t.objectStore(STORE_CICLO);
+  for (const r of records) store.put(r);
+  await txDone(t);
+}
+
 /* ------------------------------- Tags ------------------------------- */
 
 export async function getAllTags(categoria) {
@@ -305,16 +345,62 @@ export async function setSetting(key, value) {
 }
 
 /* ------------------------------ Export ------------------------------ */
+// Fotos ficam guardadas como Blob no IndexedDB (mais eficiente), mas Blob não
+// vira JSON — por isso exportAllData() já devolve as fotos em base64, prontas
+// para JSON.stringify, e momentosFromImport() faz o caminho inverso.
+
+async function blobToBase64(blob) {
+  const buf = await blob.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function base64ToBlob(base64, mime) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+async function momentosForExport(momentos) {
+  return Promise.all(momentos.map(async (m) => {
+    if (!m.fotos || !m.fotos.length) return m;
+    const fotos = await Promise.all(m.fotos.map(async (f) => ({
+      id: f.id,
+      criadaEm: f.criadaEm,
+      mime: f.blob?.type || "image/jpeg",
+      base64: f.blob ? await blobToBase64(f.blob) : f.base64,
+    })));
+    return { ...m, fotos };
+  }));
+}
+
+/** Reconstrói os Blobs das fotos a partir do base64 de um backup importado. */
+export function momentosFromImport(momentos) {
+  return momentos.map((m) => {
+    if (!m.fotos || !m.fotos.length) return m;
+    const fotos = m.fotos.map((f) =>
+      f.base64 ? { id: f.id, criadaEm: f.criadaEm, blob: base64ToBlob(f.base64, f.mime || "image/jpeg") } : f
+    );
+    return { ...m, fotos };
+  });
+}
 
 export async function exportAllData() {
-  const [checkins, tags, momentos] = await Promise.all([getAllCheckIns(), getAllTags(), getAllMomentos()]);
+  const [checkins, tags, momentosRaw, ciclo] = await Promise.all([
+    getAllCheckIns(), getAllTags(), getAllMomentos(), getAllCiclo(),
+  ]);
+  const momentos = await momentosForExport(momentosRaw);
   return {
     exportedAt: new Date().toISOString(),
     version: DB_VERSION,
     checkins,
     tags,
     momentos,
+    ciclo,
   };
 }
 
-export const STORES = { STORE_CHECKINS, STORE_TAGS, STORE_SETTINGS, STORE_MOMENTOS };
+export const STORES = { STORE_CHECKINS, STORE_TAGS, STORE_SETTINGS, STORE_MOMENTOS, STORE_CICLO };
