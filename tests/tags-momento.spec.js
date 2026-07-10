@@ -30,8 +30,10 @@ test("tag criada no check-in aparece e pode ser renomeada", async ({ page }) => 
   await page.locator(".settings-row button", { hasText: "Salvar" }).click();
   await page.waitForTimeout(300);
 
-  await expect(page.locator("body")).toContainText("Academia do Bairro");
-  await expect(page.locator("body")).not.toContainText("Academia\n");
+  // Precisa ser texto exato: "Academia do Bairro" também contém a
+  // substring "Academia", então toContainText não distingue os dois.
+  const lugaresCard = page.locator(".card", { hasText: "Lugares" });
+  await expect(lugaresCard.locator(".settings-row .label")).toHaveText("Academia do Bairro");
 });
 
 test("registro espontâneo aparece na tela Hoje sem afetar os check-ins fixos", async ({ page }) => {
