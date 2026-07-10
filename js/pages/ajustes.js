@@ -23,6 +23,12 @@ export async function renderAjustesPage() {
 
   const header = h("div", { class: "page-header" }, [h("h1", { text: "Ajustes" })]);
 
+  const consultaCard = h("div", { class: "card" }, [
+    h("div", { class: "card-title", text: "🩺 Modo Consulta" }),
+    h("div", { class: "card-sub", text: "Gere um resumo organizado (sintomas, medicamentos, gráficos e padrões) pronto pra imprimir ou salvar em PDF e levar numa consulta." }),
+    h("button", { class: "btn btn-primary", type: "button", text: "Abrir", onClick: () => navigate("/consulta") }),
+  ]);
+
   const perfilCard = h("div", { class: "card" }, [
     h("div", { class: "card-title", text: "🧾 Meu perfil" }),
     h("div", { class: "card-sub", text: "Nome, idade, CPF, telefone, alergias e ficha médica." }),
@@ -69,7 +75,7 @@ export async function renderAjustesPage() {
 
   const cicloCard = h("div", { class: "card" }, []);
   const remindersCard = h("div", { class: "card" }, []);
-  mount(app, header, perfilCard, securityCard, protectionCard, backupCard, tagsCard, cicloCard, remindersCard);
+  mount(app, header, consultaCard, perfilCard, securityCard, protectionCard, backupCard, tagsCard, cicloCard, remindersCard);
   await renderReminders(remindersCard);
   await renderSeguranca(securityCard);
   await renderProtection(protectionCard);

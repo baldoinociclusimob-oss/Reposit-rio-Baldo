@@ -187,12 +187,16 @@ function activityInsights(days, tagById) {
   return [...compareMetric("energia", "energia"), ...compareMetric("estresse", "nível de estresse")];
 }
 
-export async function generateInsights() {
+/** startDate/endDate (YYYY-MM-DD, inclusive) restringem a análise a um
+ * período — usado pelo Modo Consulta. Sem eles, usa todo o histórico. */
+export async function generateInsights({ startDate, endDate } = {}) {
   const [allCheckins, allTags, allMomentos, allCiclo] = await Promise.all([
     getAllCheckIns(), getAllTags(), getAllMomentos(), getAllCiclo(),
   ]);
   const series = buildDailySeries(allCheckins, allMomentos, allCiclo);
-  const days = [...series.values()];
+  let days = [...series.values()];
+  if (startDate) days = days.filter((d) => d.date >= startDate);
+  if (endDate) days = days.filter((d) => d.date <= endDate);
   const tagById = new Map(allTags.map((t) => [t.id, t]));
 
   const totalDaysComRegistro = days.filter((d) => d.temAlgumRegistro).length;

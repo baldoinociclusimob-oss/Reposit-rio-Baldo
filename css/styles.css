@@ -508,3 +508,27 @@ textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); o
 /* ---------- Segurança (Ajustes) ---------- */
 .security-setup-form { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .security-status { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--primary-dark); margin-bottom: 10px; }
+
+/* ---------- Modo Consulta ---------- */
+.consulta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.consulta-table td, .consulta-table th { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.consulta-table-label { font-weight: 700; width: 40%; color: var(--text-muted); }
+.consulta-table-grid th { font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--text-muted); }
+.consulta-chart-title { font-size: 13px; font-weight: 700; margin: 10px 0 4px; }
+.consulta-crise-item, .consulta-padrao-item {
+  padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.consulta-crise-item:last-child, .consulta-padrao-item:last-child { border-bottom: none; }
+.consulta-crise-item p { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; }
+.consulta-footer { color: var(--text-muted); font-size: 11px; text-align: center; margin-top: 20px; }
+
+@media print {
+  .no-print, #tabbar, .toast-root, #banner-root { display: none !important; }
+  body { background: #fff !important; }
+  .app { padding: 0 !important; max-width: 100% !important; background: #fff !important; color: #000 !important; }
+  .consulta-block { break-inside: avoid; page-break-inside: avoid; margin-bottom: 10px; }
+  .card { box-shadow: none !important; border: 1px solid #999 !important; background: #fff !important; }
+  .consulta-table td, .consulta-table th { border-color: #ccc !important; }
+  * { color: #000 !important; }
+  @page { margin: 1.2cm; }
+}
