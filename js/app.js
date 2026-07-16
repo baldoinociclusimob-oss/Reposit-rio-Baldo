@@ -71,6 +71,25 @@ boot();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    navigator.serviceWorker.register("service-worker.js").then((reg) => {
+      // Checa por uma versão nova sempre que o app volta a ficar visível
+      // (ex.: reabrir pela tela de início no iPhone), não só no load —
+      // PWAs instaladas no iOS costumam ficar "congeladas" numa versão
+      // antiga se essa checagem só acontecer uma vez.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
+    }).catch(() => {});
+
+    // O service worker novo assume o controle assim que instala
+    // (self.skipWaiting() + clients.claim()); esse listener recarrega a
+    // página nesse momento para trocar HTML/CSS/JS já carregados pelos
+    // novos, em vez de deixar a aba antiga rodando com o SW novo por baixo.
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
   });
 }

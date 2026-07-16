@@ -6,7 +6,7 @@
 // número da versão abaixo a cada deploy para forçar a limpeza do cache
 // antigo em quem já tinha instalado o app.
 
-const CACHE_NAME = "diario-vital-v2";
+const CACHE_NAME = "diario-vital-v3";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -26,7 +26,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== location.origin) return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "no-store" })
       .then((response) => {
         if (response && response.status === 200) {
           const copy = response.clone();
