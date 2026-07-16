@@ -15,7 +15,7 @@ function svg(tag, attrs = {}, children = []) {
 /**
  * Gráfico de linha. points: [{label, value}] onde value pode ser null (sem dado, não interpola).
  */
-export function lineChart({ points, min = 1, max = 5, color = "#7c9885", height = 150, labelEvery = 1 }) {
+export function lineChart({ points, min = 1, max = 5, color = "#8f1d24", height = 150, labelEvery = 1 }) {
   const spacing = points.length > 14 ? 26 : 46;
   const marginL = 26, marginR = 12, marginT = 14, marginB = 26;
   const width = Math.max(280, points.length * spacing) + marginL + marginR;
@@ -75,7 +75,7 @@ export function lineChart({ points, min = 1, max = 5, color = "#7c9885", height 
 }
 
 /** Gráfico de barras simples (ex.: frequência de dores). points: [{label, value}] com value >= 0. */
-export function barChart({ points, color = "#c98a5e", height = 150, labelEvery = 1 }) {
+export function barChart({ points, color = "#d1293b", height = 150, labelEvery = 1 }) {
   const spacing = points.length > 14 ? 26 : 46;
   const marginL = 20, marginR = 12, marginT = 14, marginB = 26;
   const width = Math.max(280, points.length * spacing) + marginL + marginR;

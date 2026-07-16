@@ -6,9 +6,9 @@ import { lineChart, barChart } from "../charts.js";
 
 const METRICS = [
   { key: "humor", title: "😊 Humor", color: "var(--primary)", min: 1, max: 5 },
-  { key: "energia", title: "⚡ Energia", color: "#c98a5e", min: 1, max: 5 },
-  { key: "sono", title: "🌙 Qualidade do sono", color: "#6ea3c9", min: 1, max: 5 },
-  { key: "estresse", title: "😣 Nível de estresse", color: "#b5564a", min: 1, max: 5 },
+  { key: "energia", title: "⚡ Energia", color: "#c1272d", min: 1, max: 5 },
+  { key: "sono", title: "🌙 Qualidade do sono", color: "#6e1423", min: 1, max: 5 },
+  { key: "estresse", title: "😣 Nível de estresse", color: "#ff5a36", min: 1, max: 5 },
 ];
 
 export async function renderTendenciasPage() {
